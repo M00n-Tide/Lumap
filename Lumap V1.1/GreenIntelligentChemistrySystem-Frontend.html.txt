@@ -1,0 +1,187 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Green Intelligent Chemistry System</title>
+    <link rel="stylesheet" href="https://unpkg.com/element-plus/dist/index.css">
+    <script src="https://unpkg.com/vue@3/dist/vue.global.js"></script>
+    <script src="https://unpkg.com/element-plus/dist/index.full.js"></script>
+    <script src="https://unpkg.com/axios/dist/axios.min.js"></script>
+    <style>
+        .container { padding: 20px; }
+        .el-menu { height: 100vh; border-right: none; }
+        .content { padding: 20px; }
+    </style>
+</head>
+<body>
+    <div id="app">
+        <el-container style="height: 100vh;">
+            <!-- 侧边栏菜单 -->
+            <el-aside width="200px" style="background-color: #001529;">
+                <el-menu :default-active="activeMenu" class="el-menu-vertical-demo" background-color="#001529" text-color="#fff" active-text-color="#ffd04b" @select="handleMenuSelect">
+                    <el-menu-item index="1">
+                        <el-icon><i class="el-icon-menu"></i></el-icon>
+                        <span>化学品管理</span>
+                    </el-menu-item>
+                    <el-menu-item index="2">
+                        <el-icon><i class="el-icon-document"></i></el-icon>
+                        <span>安全数据管理</span>
+                    </el-menu-item>
+                    <el-menu-item index="3">
+                        <el-icon><i class="el-icon-flask"></i></el-icon>
+                        <span>实验管理</span>
+                    </el-menu-item>
+                    <el-menu-item index="4">
+                        <el-icon><i class="el-icon-warning"></i></el-icon>
+                        <span>风险监控</span>
+                    </el-menu-item>
+                </el-menu>
+            </el-aside>
+
+            <!-- 主内容区 -->
+            <el-main class="content">
+                <component :is="currentComponent"></component>
+            </el-main>
+        </el-container>
+    </div>
+
+    <script>
+        const { createApp, ref, reactive, onMounted, watch } = Vue;
+        const { ElMessage, ElDialog, ElTable, ElTableColumn, ElButton } = ElementPlus;
+
+        // 路由组件定义
+        const ChemicalManagement = {
+            template: `
+                <div>
+                    <h2>化学品管理</h2>
+                    <el-button type="primary" @click="openAddCatalog">新增化学品</el-button>
+                    <el-table :data="catalogs" border style="width: 100%; margin-top: 20px;">
+                        <el-table-column prop="id" label="ID" width="80"></el-table-column>
+                        <el-table-column prop="chemicalName" label="名称"></el-table-column>
+                        <el-table-column prop="casNumber" label="CAS号"></el-table-column>
+                        <el-table-column prop="hazardLevel" label="危险等级">
+                            <template #default="scope">
+                                <span>{{ scope.row.hazardLevel }}</span>
+                            </template>
+                        </el-table-column>
+                        <el-table-column label="操作">
+                            <template #default="scope">
+                                <el-button size="small" @click="viewInventory(scope.row)">库存</el-button>
+                            </template>
+                        </el-table-column>
+                    </el-table>
+
+                    <!-- 库存弹窗 -->
+                    <el-dialog v-model="inventoryDialogVisible" title="库存信息" width="800px">
+                        <el-table :data="inventoryList" border style="width: 100%;">
+                            <el-table-column prop="id" label="库存ID"></el-table-column>
+                            <el-table-column prop="location" label="存储位置"></el-table-column>
+                            <el-table-column prop="quantity" label="数量"></el-table-column>
+                            <el-table-column prop="status" label="状态"></el-table-column>
+                        </el-table>
+                    </el-dialog>
+                </div>
+            `,
+            setup() {
+                const catalogs = ref([]);
+                const inventoryDialogVisible = ref(false);
+                const inventoryList = ref([]);
+
+                // 【已修复】加载化学品目录数据
+                const loadCatalogs = async () => {
+                    try {
+                        // 假设后端有获取所有目录的接口
+                        const res = await axios.get('/api/chemicals/catalogs');
+                        catalogs.value = res.data;
+                    } catch (err) {
+                        ElMessage.error('加载化学品目录失败');
+                        console.error(err);
+                    }
+                };
+
+                // 组件挂载时加载数据
+                onMounted(loadCatalogs);
+
+                // 【已修复】实现查看库存方法
+                const viewInventory = async (catalog) => {
+                    try {
+                        const res = await axios.get(`/api/chemicals/inventories?catalogId=${catalog.id}`);
+                        inventoryList.value = res.data;
+                        inventoryDialogVisible.value = true;
+                    } catch (err) {
+                        ElMessage.error('加载库存数据失败');
+                        console.error(err);
+                    }
+                };
+
+                const openAddCatalog = () => {
+                    // 新增化学品的逻辑
+                    ElMessage.info('新增化学品功能待实现');
+                };
+
+                return {
+                    catalogs,
+                    inventoryDialogVisible,
+                    inventoryList,
+                    loadCatalogs,
+                    viewInventory,
+                    openAddCatalog
+                };
+            }
+        };
+
+        const SafetyDataManagement = {
+            template: `<div><h2>安全数据管理</h2></div>`
+        };
+
+        const ExperimentManagement = {
+            template: `<div><h2>实验管理</h2></div>`
+        };
+
+        const RiskMonitor = {
+            template: `<div><h2>风险监控</h2></div>`
+        };
+
+        // 主应用
+        createApp({
+            components: {
+                ChemicalManagement,
+                SafetyDataManagement,
+                ExperimentManagement,
+                RiskMonitor
+            },
+            setup() {
+                const activeMenu = ref('1');
+                const currentComponent = ref('ChemicalManagement');
+
+                // 【已修复】监听菜单选择事件
+                const handleMenuSelect = (key, keyPath) => {
+                    switch(key) {
+                        case '1':
+                            currentComponent.value = 'ChemicalManagement';
+                            break;
+                        case '2':
+                            currentComponent.value = 'SafetyDataManagement';
+                            break;
+                        case '3':
+                            currentComponent.value = 'ExperimentManagement';
+                            break;
+                        case '4':
+                            currentComponent.value = 'RiskMonitor';
+                            break;
+                        default:
+                            currentComponent.value = 'ChemicalManagement';
+                    }
+                };
+
+                return {
+                    activeMenu,
+                    currentComponent,
+                    handleMenuSelect
+                };
+            }
+        }).use(ElementPlus).mount('#app');
+    </script>
+</body>
+</html>
